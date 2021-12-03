@@ -6,12 +6,11 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 )
 
 var (
-	bit0    = byte(48)
-	bit1    = byte(49)
 	example = []byte(`00100
 11110
 10110
@@ -28,28 +27,20 @@ var (
 )
 
 func calculate(r io.Reader, size int) int {
-	gamma := make([]int, size)
-	epsilon := make([]int, size)
 
+	// rotate lines
+	var lines = make([]string, size)
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		for pos, char := range scanner.Bytes() {
-			if char == bit1 {
-				gamma[pos]++
-			} else if char == bit0 {
-				epsilon[pos]++
-			} else {
-				panic("unexpected char")
-			}
+		for pos, char := range scanner.Text() {
+			lines[pos] = lines[pos] + string(char)
 		}
 	}
-	gr := ""
-	er := ""
-	for i, g := range gamma {
-		if int(g) == int(epsilon[i]) {
-			panic("unexpected counts")
-		}
-		if int(g) > int(epsilon[i]) {
+
+	// build rates in binary format
+	var gr, er string
+	for _, row := range lines {
+		if strings.Count(row, "1") > len(row)/2 {
 			gr = gr + "1"
 			er = er + "0"
 		} else {
@@ -58,6 +49,7 @@ func calculate(r io.Reader, size int) int {
 		}
 	}
 
+	// parse to ints
 	grate, err := strconv.ParseInt(gr, 2, 64)
 	if err != nil {
 		panic(err)
