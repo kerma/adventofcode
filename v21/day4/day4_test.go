@@ -3,7 +3,6 @@ package day4
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -36,8 +35,20 @@ var (
 
 type board [][]int
 
-func run(r io.Reader) int {
+func contains(ns []int, n int) bool {
+	for _, v := range ns {
+		if v == n {
+			return true
+		}
+	}
+	return false
+}
 
+func remove(s []int, i int) []int {
+	return append(s[:i], s[i+1:]...)
+}
+
+func parseInput(r io.Reader) ([]int, []board) {
 	var nums []int
 	boards := make([]board, 0)
 	b := make(board, 0)
@@ -80,8 +91,14 @@ func run(r io.Reader) int {
 	}
 	boards = append(boards, b)
 
-	// transform columns to rows
-	for ii, b := range boards {
+	return nums, boards
+}
+
+func transform(bs []board) []board {
+	boards := make([]board, len(bs))
+	copy(boards, bs)
+
+	for ii, b := range bs {
 		if len(b) == 0 {
 			continue
 		}
@@ -92,35 +109,11 @@ func run(r io.Reader) int {
 			}
 			boards[ii] = append(boards[ii], n)
 		}
-		fmt.Printf("B%d %v\n", ii, boards[ii])
 	}
+	return boards
+}
 
-	// play the bingo
-	winnerIdx := -1
-	lastN := 0
-	remove := func(s []int, i int) []int {
-		return append(s[:i], s[i+1:]...)
-	}
-	for _, n := range nums {
-		for bi, b := range boards {
-			for ri, row := range b {
-				for ni, bn := range row {
-					if n == bn {
-						nrow := remove(row, ni)
-						boards[bi][ri] = nrow
-						if len(nrow) == 0 {
-							winnerIdx = bi
-							lastN = n
-							goto BINGO
-						}
-					}
-				}
-			}
-		}
-	}
-
-BINGO:
-
+func boardSum(b board) int {
 	flatten := func(ns [][]int) []int {
 		n := make([]int, 0)
 		for _, row := range ns {
@@ -130,18 +123,9 @@ BINGO:
 		}
 		return n
 	}
-	numbers := flatten(boards[winnerIdx])
+	numbers := flatten(b)
 
 	filter := func(ns []int) []int {
-		contains := func(ns []int, n int) bool {
-			for _, v := range ns {
-				if v == n {
-					return true
-				}
-			}
-			return false
-		}
-
 		f := make([]int, 0)
 		for _, n := range ns {
 			if !contains(f, n) {
@@ -158,7 +142,69 @@ BINGO:
 		}
 		return
 	}
-	total := sum(numbers) - lastN
+	return sum(numbers)
+}
+
+func playBingo(ns []int, boards []board) (int, int) {
+	for _, n := range ns {
+		for bi, b := range boards {
+			for ri, row := range b {
+				for ni, bn := range row {
+					if n == bn {
+						nrow := remove(row, ni)
+						boards[bi][ri] = nrow
+						if len(nrow) == 0 {
+							return bi, n
+						}
+					}
+				}
+			}
+		}
+	}
+	return -1, 0
+}
+
+func playBingoLooser(ns []int, boards []board) (int, int) {
+	boardIds := make([]int, 0)
+	lastN := 0
+	for _, n := range ns {
+		for bi, b := range boards {
+			if contains(boardIds, bi) {
+				continue
+			}
+			for ri, row := range b {
+				for ni, bn := range row {
+					if n == bn {
+						nrow := remove(row, ni)
+						boards[bi][ri] = nrow
+						if len(nrow) == 0 {
+							boardIds = append(boardIds, bi)
+							lastN = n
+						}
+					}
+				}
+			}
+		}
+	}
+	return boardIds[len(boardIds)-1], lastN
+}
+
+func run(r io.Reader) int {
+	nums, boards := parseInput(r)
+	boards = transform(boards)
+
+	winnerIdx, lastN := playBingo(nums, boards)
+	total := boardSum(boards[winnerIdx]) - lastN
+
+	return total * lastN
+}
+
+func run2(r io.Reader) int {
+	nums, boards := parseInput(r)
+	boards = transform(boards)
+
+	winnerIdx, lastN := playBingoLooser(nums, boards)
+	total := boardSum(boards[winnerIdx])
 
 	return total * lastN
 }
@@ -181,6 +227,28 @@ func TestPartOne(t *testing.T) {
 	defer file.Close()
 
 	if got := run(file); expect != got {
+		t.Fatalf("%d != %d\n", expect, got)
+	}
+}
+
+func TestExampleTwo(t *testing.T) {
+	expect := 1924
+	r := bytes.NewReader(example)
+	if got := run2(r); expect != got {
+		t.Fatalf("%d != %d\n", expect, got)
+	}
+}
+
+func TestPartTwo(t *testing.T) {
+	expect := 8468
+
+	file, err := os.Open("input")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	if got := run2(file); expect != got {
 		t.Fatalf("%d != %d\n", expect, got)
 	}
 }
