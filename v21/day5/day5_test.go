@@ -30,8 +30,8 @@ type coordinate struct {
 	x, y int
 }
 
-func key(x, y int) string {
-	return fmt.Sprintf("%d|%d", x, y)
+func (c coordinate) key() string {
+	return fmt.Sprintf("%d|%d", c.x, c.y)
 }
 
 func parseTo(ss []string) (coordinate, coordinate) {
@@ -47,66 +47,56 @@ func parseTo(ss []string) (coordinate, coordinate) {
 
 }
 
-func findPoints(a, b coordinate) []string {
-	keys := make([]string, 0)
+func findPoints(a, b coordinate) []coordinate {
+	cs := make([]coordinate, 0)
 	if a.x == b.x { // vert
+		r1, r2 := b.y, a.y
 		if a.y <= b.y {
-			for i := a.y; i <= b.y; i++ {
-				keys = append(keys, key(a.x, i))
-			}
-		} else {
-			for i := b.y; i <= a.y; i++ {
-				keys = append(keys, key(a.x, i))
-			}
+			r1, r2 = a.y, b.y
+		}
+		for i := r1; i <= r2; i++ {
+			cs = append(cs, coordinate{a.x, i})
 		}
 	} else if a.y == b.y { // horiz
+		r1, r2 := b.x, a.x
 		if a.x <= b.x {
-			for i := a.x; i <= b.x; i++ {
-				keys = append(keys, key(i, a.y))
-			}
-		} else {
-			for i := b.x; i <= a.x; i++ {
-				keys = append(keys, key(i, a.y))
-			}
+			r1, r2 = a.x, b.x
+		}
+		for i := r1; i <= r2; i++ {
+			cs = append(cs, coordinate{i, a.y})
 		}
 	}
-	return keys
+	return cs
 }
 
-func findDiagonalPoints(a, b coordinate) []string {
-	xs := make([]int, 0)
-	ys := make([]int, 0)
-	i := a.x
+func findDiagonalPoints(a, b coordinate) []coordinate {
+	x := a.x
+	y := a.y
+	xs := []int{x}
+	ys := []int{y}
 	for {
-		if i == b.x {
+		if x == b.x {
 			break
 		}
-		if i > b.x {
-			i--
+		if x > b.x {
+			x--
 		} else {
-			i++
+			x++
 		}
-		xs = append(xs, i)
-	}
-	i = a.y
-	for {
-		if i == b.y {
-			break
-		}
-		if i > b.y {
-			i--
+		xs = append(xs, x)
+		if y > b.y {
+			y--
 		} else {
-			i++
+			y++
 		}
-		ys = append(ys, i)
+		ys = append(ys, y)
 	}
 
-	keys := make([]string, 0)
-	keys = append(keys, key(a.x, a.y))
+	cs := make([]coordinate, 0)
 	for i, x := range xs {
-		keys = append(keys, key(x, ys[i]))
+		cs = append(cs, coordinate{x, ys[i]})
 	}
-	return keys
+	return cs
 }
 
 func isDiagonal(a, b coordinate) bool {
@@ -116,12 +106,12 @@ func isDiagonal(a, b coordinate) bool {
 	return true
 }
 
-func findPointsBetween(a, b coordinate, diagonal bool) []string {
+func findPointsBetween(a, b coordinate, diagonal bool) []coordinate {
 	if isDiagonal(a, b) {
 		if diagonal {
 			return findDiagonalPoints(a, b)
 		}
-		return []string{}
+		return []coordinate{}
 	}
 	return findPoints(a, b)
 }
@@ -133,9 +123,9 @@ func run(r io.Reader, diagonal bool) int {
 	for i := 0; scanner.Scan(); i++ {
 		m := pattern.FindStringSubmatch(scanner.Text())
 		c1, c2 := parseTo(m)
-		keys := findPointsBetween(c1, c2, diagonal)
-		for _, k := range keys {
-			counter[k] += 1
+		points := findPointsBetween(c1, c2, diagonal)
+		for _, p := range points {
+			counter[p.key()] += 1
 		}
 	}
 
