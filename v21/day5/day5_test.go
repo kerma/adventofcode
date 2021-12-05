@@ -26,123 +26,121 @@ var (
 `)
 )
 
-func filterInt(ss []string) []int {
-	var err error
-	r := make([]int, len(ss)-1)
-	for i, s := range ss {
-		if i == 0 {
-			continue
-		}
-		r[i-1], err = strconv.Atoi(s)
-		if err != nil {
-			panic(err)
-		}
-	}
-	return r
+type coordinate struct {
+	x, y int
 }
 
 func key(x, y int) string {
 	return fmt.Sprintf("%d|%d", x, y)
 }
 
-func getPoints(point []int) []string {
+func parseTo(ss []string) (coordinate, coordinate) {
+	var err error
+	r := make([]int, len(ss)-1)
+	for i, s := range ss[1:] {
+		r[i], err = strconv.Atoi(s)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return coordinate{r[0], r[1]}, coordinate{r[2], r[3]}
 
-	var x1, y1, x2, y2 = point[0], point[1], point[2], point[3]
+}
+
+func findPoints(a, b coordinate) []string {
 	keys := make([]string, 0)
-	if x1 == x2 { // vert
-		if y1 <= y2 {
-			for i := y1; i <= y2; i++ {
-				keys = append(keys, key(x1, i))
+	if a.x == b.x { // vert
+		if a.y <= b.y {
+			for i := a.y; i <= b.y; i++ {
+				keys = append(keys, key(a.x, i))
 			}
 		} else {
-			for i := y2; i <= y1; i++ {
-				keys = append(keys, key(x1, i))
+			for i := b.y; i <= a.y; i++ {
+				keys = append(keys, key(a.x, i))
 			}
 		}
-	} else if y1 == y2 { // horiz
-		if x1 <= x2 {
-			for i := x1; i <= x2; i++ {
-				keys = append(keys, key(i, y1))
+	} else if a.y == b.y { // horiz
+		if a.x <= b.x {
+			for i := a.x; i <= b.x; i++ {
+				keys = append(keys, key(i, a.y))
 			}
 		} else {
-			for i := x2; i <= x1; i++ {
-				keys = append(keys, key(i, y1))
+			for i := b.x; i <= a.x; i++ {
+				keys = append(keys, key(i, a.y))
 			}
 		}
 	}
 	return keys
 }
 
-func getPointsV(point []int) []string {
-	var x1, y1, x2, y2 = point[0], point[1], point[2], point[3]
+func findDiagonalPoints(a, b coordinate) []string {
 	xs := make([]int, 0)
 	ys := make([]int, 0)
-	i := x1
+	i := a.x
 	for {
-		if i == x2 {
+		if i == b.x {
 			break
 		}
-		if i > x2 {
+		if i > b.x {
 			i--
 		} else {
 			i++
 		}
 		xs = append(xs, i)
 	}
-	i = y1
+	i = a.y
 	for {
-		if i == y2 {
+		if i == b.y {
 			break
 		}
-		if i > y2 {
+		if i > b.y {
 			i--
 		} else {
 			i++
 		}
 		ys = append(ys, i)
 	}
+
 	keys := make([]string, 0)
-	keys = append(keys, key(x1, y1))
+	keys = append(keys, key(a.x, a.y))
 	for i, x := range xs {
 		keys = append(keys, key(x, ys[i]))
 	}
 	return keys
 }
 
-func isDiagonal(point []int) bool {
-	var x1, y1, x2, y2 = point[0], point[1], point[2], point[3]
-	if x1 == x2 || y1 == y2 {
+func isDiagonal(a, b coordinate) bool {
+	if a.x == b.x || a.y == b.y {
 		return false
 	}
 	return true
 }
 
-func calculateKeys(point []int, diagonal bool) []string {
-	if isDiagonal(point) {
+func findPointsBetween(a, b coordinate, diagonal bool) []string {
+	if isDiagonal(a, b) {
 		if diagonal {
-			return getPointsV(point)
-		} else {
-			return []string{}
+			return findDiagonalPoints(a, b)
 		}
+		return []string{}
 	}
-	return getPoints(point)
+	return findPoints(a, b)
 }
 
 func run(r io.Reader, diagonal bool) int {
-	mapCounter := make(map[string]int, 0)
-	scanner := bufio.NewScanner(r)
+	counter := make(map[string]int, 0)
 
+	scanner := bufio.NewScanner(r)
 	for i := 0; scanner.Scan(); i++ {
 		m := pattern.FindStringSubmatch(scanner.Text())
-		point := filterInt(m)
-		keys := calculateKeys(point, diagonal)
+		c1, c2 := parseTo(m)
+		keys := findPointsBetween(c1, c2, diagonal)
 		for _, k := range keys {
-			mapCounter[k] += 1
+			counter[k] += 1
 		}
 	}
 
 	var c int
-	for _, v := range mapCounter {
+	for _, v := range counter {
 		if v >= 2 {
 			c++
 		}
