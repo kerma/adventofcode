@@ -19,37 +19,36 @@ func read(r io.Reader) []int {
 	ns := make([]int, 0)
 	for scanner.Scan() {
 		for _, x := range strings.Split(scanner.Text(), ",") {
-			x, err := strconv.Atoi(x)
+			n, err := strconv.Atoi(x)
 			if err != nil {
-				panic(x)
+				panic(err)
 			}
-			ns = append(ns, x)
+			ns = append(ns, n)
 		}
 	}
 	return ns
 }
 
 func run(r io.Reader, days int) int {
-	ns := read(r)
-	fishes := make([]int, 9)
 
-	for _, n := range ns {
+	fishes := make([]int, 9) // track 9 fish at most (indexed 0-8)
+	for _, n := range read(r) {
 		fishes[n] += 1
 	}
 
-	for i := 1; i <= days; i++ {
-
-		newmap := make([]int, len(fishes))
+	for d := 1; d <= days; d++ {
+		tmp := make([]int, len(fishes))
 
 		for i := 1; i <= 8; i++ { // shiftleft
-			newmap[i-1] = fishes[i]
+			tmp[i-1] = fishes[i]
 		}
 
 		if fishes[0] > 0 {
-			newmap[6] += fishes[0]
-			newmap[8] = fishes[0]
+			tmp[6] += fishes[0] // add fish0 counts to fish6 counts
+			tmp[8] = fishes[0]  // amount of new fish created
 		}
-		fishes = newmap
+
+		fishes = tmp
 	}
 
 	var sum int
