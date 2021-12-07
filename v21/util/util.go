@@ -55,14 +55,43 @@ func Abs(x int) int {
 	return x
 }
 
-func Median(i []int) int {
-	if len(i)%2 != 0 { // is even
-		panic("Odd number of ints")
+func Avg(ns []int) int {
+	var a int
+	for _, n := range ns {
+		a += n
+	}
+	return int(a / len(ns))
+}
+
+func Uniq(ns []int) []int {
+	m := make(map[int]bool, 0)
+	u := make([]int, 0)
+	for _, n := range ns {
+		m[n] = true
+	}
+	for k, _ := range m {
+		u = append(u, k)
+	}
+	sort.Ints(u)
+	return u
+}
+
+// Median returns a median from sorted []int
+func Median(ns []int) int {
+	l := len(ns)
+
+	if l%2 == 0 {
+		return (ns[l/2-1] + ns[l/2]) / 2
 	}
 
-	ns := make([]int, len(i))
-	copy(ns, i)
-	sort.Ints(ns)
-
 	return ns[len(ns)/2]
+}
+
+func FindIndex(n int, ns []int) int {
+	for i, a := range ns {
+		if a == n && ns[i+1] != n {
+			return i
+		}
+	}
+	return -1
 }
