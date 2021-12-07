@@ -2,27 +2,35 @@ package util
 
 import (
 	"bufio"
+	"io"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 )
 
-func ReadInts(path string) ([]int, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var lines []int
-	scanner := bufio.NewScanner(file)
+func ReadInts(r io.Reader) []int {
+	scanner := bufio.NewScanner(r)
+	ns := make([]int, 0)
 	for scanner.Scan() {
-		n, err := strconv.Atoi(scanner.Text())
-		if err != nil {
-			return nil, err
+		line := scanner.Text()
+		if strings.ContainsRune(line, ',') {
+			for _, x := range strings.Split(line, ",") {
+				n, err := strconv.Atoi(x)
+				if err != nil {
+					panic(err)
+				}
+				ns = append(ns, n)
+			}
+		} else {
+			n, err := strconv.Atoi(line)
+			if err != nil {
+				panic(err)
+			}
+			ns = append(ns, n)
 		}
-		lines = append(lines, n)
 	}
-	return lines, scanner.Err()
+	return ns
 }
 
 func ReadLines(path string) ([]string, error) {
@@ -45,4 +53,16 @@ func Abs(x int) int {
 		return -x
 	}
 	return x
+}
+
+func Median(i []int) int {
+	if len(i)%2 != 0 { // is even
+		panic("Odd number of ints")
+	}
+
+	ns := make([]int, len(i))
+	copy(ns, i)
+	sort.Ints(ns)
+
+	return ns[len(ns)/2]
 }
