@@ -33,6 +33,27 @@ func ReadInts(r io.Reader) []int {
 	return ns
 }
 
+func ReadCharsToInts(r io.Reader) [][]int {
+	scanner := bufio.NewScanner(r)
+	ns := make([][]int, 0)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 {
+			continue
+		}
+		tmp := make([]int, 0)
+		for _, v := range []rune(line) {
+			n, err := strconv.Atoi(string(v))
+			if err != nil {
+				panic(err)
+			}
+			tmp = append(tmp, n)
+		}
+		ns = append(ns, tmp)
+	}
+	return ns
+}
+
 func ReadLines(path string) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -61,6 +82,14 @@ func Avg(ns []int) int {
 		a += n
 	}
 	return int(a / len(ns))
+}
+
+func Sum(ns []int) int {
+	var a int
+	for _, n := range ns {
+		a += n
+	}
+	return a
 }
 
 func Uniq(ns []int) []int {
