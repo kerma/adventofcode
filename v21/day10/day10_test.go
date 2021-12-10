@@ -3,9 +3,9 @@ package day10
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/kerma/adventofcode/v21/util"
@@ -26,76 +26,30 @@ var (
 `)
 )
 
-var (
-	open = []Item("([{<")
-)
+func split(r io.Reader) ([]string, *Stack) {
+	incomplete := make([]string, 0)
+	corrupted := make(Stack, 0)
 
-type Item rune
-
-func (i Item) IsOpen() bool {
-	for _, x := range open {
-		if i == x {
-			return true
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 {
+			continue
+		}
+		isCorrupted := false
+		stack := NewStack()
+		for _, item := range Stack(line) {
+			if err := stack.Push(item); err != nil {
+				corrupted = append(corrupted, item)
+				isCorrupted = true
+				break
+			}
+		}
+		if !isCorrupted {
+			incomplete = append(incomplete, line)
 		}
 	}
-	return false
-}
-
-type Stack struct {
-	items []Item
-}
-
-func NewStack() *Stack {
-	return &Stack{
-		items: make([]Item, 0),
-	}
-}
-
-func (s *Stack) Pop() error {
-	l := len(s.items)
-	if l == 0 {
-		return fmt.Errorf("stack empty")
-	}
-	s.items = s.items[0 : l-1]
-	return nil
-}
-
-func (s *Stack) Push(item Item) error {
-	l := len(s.items)
-	if l == 0 {
-		if !item.IsOpen() {
-			return fmt.Errorf("expected %c, found %c", open, item)
-		}
-		s.items = append(s.items, item)
-		return nil
-	}
-
-	last := s.items[l-1]
-	switch item {
-	case ')':
-		if last != '(' {
-			return fmt.Errorf("expected %c, found )", last)
-		}
-		s.Pop()
-	case ']':
-		if last != '[' {
-			return fmt.Errorf("expected %c, found ]", last)
-		}
-		s.Pop()
-	case '}':
-		if last != '{' {
-			return fmt.Errorf("expected %c, found }", last)
-		}
-		s.Pop()
-	case '>':
-		if last != '<' {
-			return fmt.Errorf("expected %c, found >", last)
-		}
-		s.Pop()
-	default:
-		s.items = append(s.items, item)
-	}
-	return nil
+	return incomplete, &corrupted
 }
 
 func run(r io.Reader) int {
@@ -108,18 +62,58 @@ func run(r io.Reader) int {
 	}
 	scores := make([]int, 0)
 
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		stack := NewStack()
-		for _, r := range []Item(scanner.Text()) {
-			if err := stack.Push(r); err != nil {
-				scores = append(scores, scoreMap[r])
-				break
-			}
-		}
+	_, corrupted := split(r)
+	for _, item := range *corrupted {
+		scores = append(scores, scoreMap[item])
 	}
 
 	return util.Sum(scores)
+}
+
+func run2(r io.Reader) int {
+
+	scoreMap := map[Item]int{
+		')': 1,
+		']': 2,
+		'}': 3,
+		'>': 4,
+	}
+	score := func(completion Stack) int {
+		var total int
+		for _, item := range completion {
+			total = total * 5
+			total += scoreMap[item]
+		}
+		return total
+	}
+
+	complete := func(line string) Stack {
+		reversed := NewStackFrom(line).Reverse()
+
+		comps := make([]Item, 0)
+		stack := NewStack()
+		for _, item := range *reversed {
+			if err := stack.PushReverse(item); err != nil {
+				comps = append(comps, pairMap[err.found])
+			}
+		}
+
+		return comps
+	}
+
+	comps := make([]Stack, 0)
+	incomplete, _ := split(r)
+	for _, line := range incomplete {
+		comps = append(comps, complete(line))
+	}
+
+	scores := make([]int, len(comps))
+	for i, c := range comps {
+		scores[i] = score(c)
+	}
+
+	sort.Ints(scores)
+	return scores[(len(scores)-1)/2]
 }
 
 func TestExample(t *testing.T) {
@@ -144,16 +138,24 @@ func TestPartOne(t *testing.T) {
 	}
 }
 
-// func TestPartTwo(t *testing.T) {
-// 	expect := 95851339
+func TestExamplePartTwo(t *testing.T) {
+	expect := 288957
+	r := bytes.NewReader(example)
+	if got := run2(r); expect != got {
+		t.Fatalf("%d != %d\n", expect, got)
+	}
+}
 
-// 	file, err := os.Open("input")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer file.Close()
+func TestPartTwo(t *testing.T) {
+	expect := 1952146692
 
-// 	if got := run2(file); expect != got {
-// 		t.Fatalf("%d != %d\n", expect, got)
-// 	}
-// }
+	file, err := os.Open("input")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	if got := run2(file); expect != got {
+		t.Fatalf("%d != %d\n", expect, got)
+	}
+}
