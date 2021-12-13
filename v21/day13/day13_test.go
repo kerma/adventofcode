@@ -40,7 +40,6 @@ fold along x=5`)
 
 func run(r io.Reader) int {
 
-	// var instructions [][]int
 	var dots = make(map[string]bool)
 
 	scanner := bufio.NewScanner(r)
@@ -51,88 +50,83 @@ func run(r io.Reader) int {
 		}
 		if m := p1.FindStringSubmatch(line); len(m) > 0 {
 			dots[m[0]] = true
-			// x, _ := strconv.Atoi(m[1])
-			// y, _ := strconv.Atoi(m[2])
-			// instructions = append(instructions, []int{x, y})
 		}
 	}
-	// fmt.Println(instructions)
 
-	var f1 []string
-	var f2 []int
+	var folds []string
+	var foldAlong []int
 	for scanner.Scan() {
 		if m := p2.FindStringSubmatch(scanner.Text()); len(m) > 0 {
-			f1 = append(f1, m[1])
+			folds = append(folds, m[1])
 			n, _ := strconv.Atoi(m[2])
-			f2 = append(f2, n)
+			foldAlong = append(foldAlong, n)
 		}
 	}
-	fmt.Println(f1)
-	fmt.Println(f2)
 
-	coords := func(s string) (int, int) {
-		m := strings.Split(s, ",")
-		x, _ := strconv.Atoi(m[0])
-		y, _ := strconv.Atoi(m[1])
-		return x, y
-	}
-	key := func(x, y int) string {
-		return fmt.Sprintf("%d,%d", x, y)
-	}
+	var count int
+	for i, xory := range folds {
+		for k, _ := range dots {
+			x, y := coords(k)
+			if xory == "y" {
+				if y <= foldAlong[i] {
+					continue
+				}
+				delete(dots, k)
 
-	foldx, foldy := false, false
-	if f1[0] == "x" {
-		foldx = true
-	}
-	if f1[0] == "y" {
-		foldy = true
-	}
-	foldfrom := f2[0]
+				distance := y - foldAlong[i]
+				y2 := foldAlong[i] - distance
+				dots[key(x, y2)] = true
+			} else if xory == "x" {
+				if x <= foldAlong[i] {
+					continue
+				}
+				delete(dots, k)
 
-	for k, _ := range dots {
-		x, y := coords(k)
-		if foldy {
-			if y < foldfrom {
-				continue
+				distance := x - foldAlong[i]
+				x2 := foldAlong[i] - distance
+				dots[key(x2, y)] = true
 			}
-			delete(dots, k)
-
-			distance := y - foldfrom
-			y2 := foldfrom - distance
-			dots[key(x, y2)] = true
 		}
-		if foldx {
-			if x < foldfrom {
-				continue
-			}
-			delete(dots, k)
-
-			distance := x - foldfrom
-			x2 := foldfrom - distance
-			dots[key(x2, y)] = true
+		if i == 0 { // count only after first fold
+			count = len(dots)
 		}
 	}
-	// fmt.Println(dots)
-	// fmt.Println(len(dots))
-
-	// for _, line := range lines {
-	// }
-
-	return len(dots)
+	Print(dots)
+	return count
 }
 
-func print(coords [][]int) {
-	for _, line := range coords {
-		for _, n := range line {
-			if n == 0 {
-				fmt.Printf(".")
+func coords(s string) (int, int) {
+	m := strings.Split(s, ",")
+	x, _ := strconv.Atoi(m[0])
+	y, _ := strconv.Atoi(m[1])
+	return x, y
+}
+
+func key(x, y int) string {
+	return fmt.Sprintf("%d,%d", x, y)
+}
+
+func Print(dots map[string]bool) {
+	var mx, my int
+	for k, _ := range dots {
+		x, y := coords(k)
+		if x >= mx {
+			mx = x + 1
+		}
+		if y >= my {
+			my = y + 1
+		}
+	}
+	for y := 0; y < my; y++ {
+		for x := 0; x < mx; x++ {
+			if _, ok := dots[key(x, y)]; ok {
+				fmt.Printf("%s", "\u2588")
 			} else {
-				fmt.Printf("#")
+				fmt.Printf(" ")
 			}
 		}
 		fmt.Println()
 	}
-
 }
 
 func TestExample(t *testing.T) {
@@ -144,8 +138,8 @@ func TestExample(t *testing.T) {
 	}
 }
 
-func TestPartOne(t *testing.T) {
-	expect := -1
+func TestPartOneAndTwo(t *testing.T) {
+	expect := 610
 
 	file, err := os.Open("input")
 	if err != nil {
@@ -156,25 +150,3 @@ func TestPartOne(t *testing.T) {
 		t.Fatalf("%d != %d\n", expect, got)
 	}
 }
-
-// func TestExamplePartTwo(t *testing.T) {
-// 	expect := -1
-// 	r := bytes.NewReader(example)
-// 	if got := run2(r); expect != got {
-// 		t.Fatalf("%d != %d\n", expect, got)
-// 	}
-// }
-
-// func TestPartTwo(t *testing.T) {
-// 	expect := 91533
-
-// 	file, err := os.Open("input")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer file.Close()
-
-// 	if got := run2(file); expect != got {
-// 		t.Fatalf("%d != %d\n", expect, got)
-// 	}
-// }
