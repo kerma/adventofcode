@@ -3,10 +3,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
-	"regexp"
-	"strconv"
 	"testing"
 
 	"golang.org/x/exp/slices"
@@ -22,26 +21,22 @@ var (
 `)
 )
 
-var pattern = regexp.MustCompile(`(\d+)-(\d+),(\d+)-(\d+)`)
-
 func parse(s string) ([]int, []int) {
-	m := pattern.FindStringSubmatch(s)
-	x1, _ := strconv.Atoi(m[1])
-	y1, _ := strconv.Atoi(m[2])
-	x2, _ := strconv.Atoi(m[3])
-	y2, _ := strconv.Atoi(m[4])
-
-	a := make([]int, 0)
-	for i := x1; i <= y1; i++ {
-		a = append(a, i)
+	var a, b [2]int
+	if _, err := fmt.Sscanf(s, "%d-%d,%d-%d", &a[0], &a[1], &b[0], &b[1]); err != nil {
+		panic(err)
 	}
 
-	b := make([]int, 0)
-	for i := x2; i <= y2; i++ {
-		b = append(b, i)
+	p := make([]int, 0)
+	for i := a[0]; i <= a[1]; i++ {
+		p = append(p, i)
+	}
+	p2 := make([]int, 0)
+	for i := b[0]; i <= b[1]; i++ {
+		p2 = append(p2, i)
 	}
 
-	return a, b
+	return p, p2
 }
 
 func order(a, b []int) ([]int, []int) {
