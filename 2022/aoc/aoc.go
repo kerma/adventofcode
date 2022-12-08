@@ -30,3 +30,32 @@ func Filter[T any](x []T, filter func(T) bool) []T {
 	}
 	return res
 }
+
+func Reverse[T any](x []T) []T {
+	l := len(x)
+	res := make([]T, len(x))
+	for i := 0; i < l; i++ {
+		res[i] = x[l-i-1]
+	}
+	return res
+}
+
+func Prod(x []int) int {
+	var a int
+	for i, n := range x {
+		if i == 0 {
+			a = n
+			continue
+		}
+		a = a * n
+	}
+	return a
+}
+
+func BytesToInts(bs []byte) []int {
+	var s []int
+	for _, b := range bs { // C way to parse str to int
+		s = append(s, int(b-byte('0')))
+	}
+	return s
+}
