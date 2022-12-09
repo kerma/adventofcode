@@ -1,5 +1,12 @@
 package aoc
 
+func Abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
 func Sum(ns []int) int {
 	var a int
 	for _, n := range ns {
