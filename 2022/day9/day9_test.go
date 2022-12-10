@@ -29,14 +29,12 @@ D 10
 L 25
 U 20`)
 
-type Point struct {
-	x       int
-	y       int
-	nr      int
-	visited map[string]struct{}
+type Knot struct {
+	x int
+	y int
 }
 
-func (h *Point) Move(d string) {
+func (h *Knot) Move(d string) {
 	switch d {
 	case "U":
 		h.y++
@@ -49,44 +47,74 @@ func (h *Point) Move(d string) {
 	}
 }
 
-func (h *Point) Prev(d string) (int, int) {
-	switch d {
-	case "U":
-		return h.x, h.y - 1
-	case "D":
-		return h.x, h.y + 1
-	case "L":
-		return h.x + 1, h.y
-	case "R":
-		return h.x - 1, h.y
+func (t *Knot) Follow(h *Knot) {
+	dx := h.x - t.x
+	cx := 1
+	if dx < 0 {
+		cx = -1
 	}
-	panic("wtf")
+	dx = Abs(dx)
+
+	dy := h.y - t.y
+	cy := 1
+	if dy < 0 {
+		cy = -1
+	}
+	dy = Abs(dy)
+
+	if (dy == 0 && dx == 0) || (dy == 1 && dx == 1) {
+		return // same or diagonal
+	}
+
+	// h
+	// .
+	// t
+	if dy == 2 && dx == 0 {
+		t.y = t.y + cy
+	}
+
+	// . . h
+	// . . .
+	// t . .
+	if dy == 2 && dx > 0 {
+		t.x = t.x + cx
+		t.y = t.y + cy
+	}
+
+	// . . h
+	// t . .
+	if dy == 1 && dx == 2 {
+		t.x = t.x + cx
+		t.y = t.y + cy
+	}
+
+	// t . h
+	if dy == 0 && dx == 2 {
+		t.x = t.x + cx
+	}
 }
 
-func (t *Point) Follow(d string, h *Point) {
-	dx := Abs(h.x-t.x) > 1
-	dy := Abs(h.y-t.y) > 1
-	x, y := h.Prev(d)
-
-	if dy {
-		t.x = x
-		t.y = y
-	}
-	if dx {
-		t.x = x
-		t.y = y
-	}
-}
-
-func (t *Point) String() string {
+func (t *Knot) String() string {
 	return fmt.Sprintf("%d|%d", t.y, t.x)
 }
 
-func run(r io.Reader) int {
+func follow(kx []*Knot) *Knot {
+	if len(kx) == 1 {
+		return kx[0]
+	}
+	head, tail := kx[0], kx[1]
+	tail.Follow(head)
+	return follow(kx[1:])
+}
+
+func run(r io.Reader, count int) int {
 	s := bufio.NewScanner(r)
 
-	head := &Point{}
-	tail := &Point{}
+	knots := make([]*Knot, count)
+	for i := 0; i < count; i++ {
+		knots[i] = &Knot{}
+	}
+
 	visited := make(map[string]struct{})
 	for s.Scan() {
 		var (
@@ -96,11 +124,13 @@ func run(r io.Reader) int {
 		fmt.Sscanf(s.Text(), "%s %d", &direction, &count)
 
 		for i := 0; i < count; i++ {
-			head.Move(direction)
-			tail.Follow(direction, head)
+			knots[0].Move(direction)
+			tail := follow(knots)
 			visited[tail.String()] = struct{}{}
 		}
 	}
+
+	// printExample(knots, 15, -6, -11, 15)
 
 	return len(visited)
 }
@@ -108,91 +138,55 @@ func run(r io.Reader) int {
 func TestExample(t *testing.T) {
 	expect := 13
 	r := bytes.NewReader(example)
-	if s := run(r); s != expect {
+	if s := run(r, 2); s != expect {
 		t.Fatalf("%d != %d\n", s, expect)
 	}
 }
 
-func TestVisit(t *testing.T) {
+func TestRope(t *testing.T) {
 	expect := 6271
 
 	f, _ := os.Open("input")
 	defer f.Close()
-	if s := run(f); s != expect {
+	if s := run(f, 2); s != expect {
 		t.Fatalf("%d != %d\n", s, expect)
 	}
 }
 
-// func TestScore(t *testing.T) {
-// 	expect := 496650
+func TestExampleKnots(t *testing.T) {
+	expect := 36
+	r := bytes.NewReader(example2)
+	if s := run(r, 10); s != expect {
+		t.Fatalf("%d != %d\n", s, expect)
+	}
+}
 
-// 	f, _ := os.Open("input")
-// 	defer f.Close()
-// 	if s := run(f, score); s != expect {
-// 		t.Fatalf("%d != %d\n", s, expect)
-// 	}
-// }
+func TestKnots(t *testing.T) {
+	expect := 2458
+	f, _ := os.Open("input")
+	defer f.Close()
+	if s := run(f, 10); s != expect {
+		t.Fatalf("%d != %d\n", s, expect)
+	}
+}
 
-// func follow(xs []*Head) {
-// 	if len(xs) < 2 {
-// 		return
-// 	}
-// 	head, tail := xs[0], xs[1]
-// 	tail.Follow(head)
-// 	tail.visited[tail.String()] = struct{}{}
-// 	follow(xs[1:])
-// }
-
-// func run2(r io.Reader) int {
-// 	s := bufio.NewScanner(r)
-
-// 	heads := make([]*Head, 10)
-// 	for i := 0; i < 10; i++ {
-// 		heads[i] = &Head{
-// 			nr:      i,
-// 			visited: make(map[string]struct{}),
-// 		}
-// 	}
-// 	// head := &Head{}
-
-// 	// tail := &Head{}
-// 	head := heads[0]
-// 	_, tail := Last(heads)
-// 	for s.Scan() {
-// 		var (
-// 			count     int
-// 			direction string
-// 		)
-// 		fmt.Sscanf(s.Text(), "%s %d", &direction, &count)
-
-// 		fmt.Println(direction)
-// 		fmt.Println(count)
-// 		for c := 0; c < count; c++ {
-// 			head.Move(direction)
-// 			follow(heads)
-// 		}
-
-// 		for y := 10; y > -10; y-- {
-// 			for x := -20; x < 20; x++ {
-// 				nr := "."
-// 				if y == 0 && x == 0 {
-// 					nr = "S"
-// 				}
-// 				for _, item := range heads {
-// 					if y == item.y && x == item.x {
-// 						nr = fmt.Sprint(item.nr)
-// 					}
-// 				}
-// 				fmt.Print(nr)
-// 			}
-// 			fmt.Println()
-// 		}
-// 		fmt.Println("=================================")
-// 		fmt.Println()
-// 		fmt.Println()
-// 		break
-
-// 	}
-
-// 	return len(tail.visited)
-// }
+func printExample(points []*Knot, y1, y2, x1, x2 int) {
+	for y := y1; y > y2; y-- {
+		for x := x1; x < x2; x++ {
+			nr := "."
+			if y == 0 && x == 0 {
+				nr = "S"
+			}
+			for i, item := range points {
+				if y == item.y && x == item.x {
+					nr = fmt.Sprint(i)
+				}
+			}
+			fmt.Print(nr)
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+	fmt.Println("=================================")
+	fmt.Println()
+}
