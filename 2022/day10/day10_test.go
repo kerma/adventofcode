@@ -3,10 +3,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
-	"strconv"
-	"strings"
 	"testing"
 
 	. "kerma/adventofcode/2022/aoc"
@@ -159,11 +158,53 @@ noop
 noop
 noop`)
 
+type CRT struct {
+	x      int
+	y      int
+	screen [][]rune
+}
+
+func NewCRT() *CRT {
+	screen := make([][]rune, 6)
+	for y := 0; y < 6; y++ {
+		row := make([]rune, 40)
+		screen[y] = row
+	}
+	return &CRT{
+		screen: screen,
+	}
+}
+
+func (crt *CRT) Draw(x int) {
+	c := '.'
+	a, b := x-1, x+1
+	if a <= crt.x && crt.x <= b {
+		c = '#'
+	}
+	crt.screen[crt.y][crt.x] = c
+
+	crt.x++
+	if crt.x == len(crt.screen[crt.y]) {
+		crt.x = 0
+		crt.y++
+	}
+}
+
+func (crt *CRT) Print() {
+	for _, row := range crt.screen {
+		for _, v := range row {
+			fmt.Print(string(v))
+		}
+		fmt.Println()
+	}
+}
+
 type CPU struct {
 	x           int
 	cycle       int
 	breakpoints map[int]struct{}
 	store       []int
+	crt         *CRT
 }
 
 func NewCPU(bp []int) *CPU {
@@ -176,6 +217,7 @@ func NewCPU(bp []int) *CPU {
 		cycle:       0,
 		breakpoints: m,
 		store:       make([]int, 0, len(bp)),
+		crt:         NewCRT(),
 	}
 }
 
@@ -186,28 +228,31 @@ func (cpu *CPU) exec() {
 	}
 }
 
-func (cpu *CPU) Run(inst string, x int) {
+func (cpu *CPU) Noop() {
+	cpu.crt.Draw(cpu.x)
 	cpu.exec()
-	if inst == "addx" {
-		cpu.exec()
-		cpu.x = cpu.x + x
-	}
 }
 
-func run(r io.Reader) int {
+func (cpu *CPU) Add(x int) {
+	cpu.Noop()
+	cpu.Noop()
+	cpu.x = cpu.x + x
+}
+
+func runCPU(r io.Reader) int {
 	s := bufio.NewScanner(r)
 
 	cpu := NewCPU([]int{20, 60, 100, 140, 180, 220})
 	for s.Scan() {
-		line := s.Text()
-		if line == "noop" {
-			cpu.Run(line, 0)
+		var x int
+		if _, err := fmt.Sscanf(s.Text(), "addx %d", &x); err != nil {
+			cpu.Noop()
 			continue
 		}
-		parts := strings.Split(line, " ")
-		n, _ := strconv.Atoi(parts[1])
-		cpu.Run(parts[0], n)
+		cpu.Add(x)
 	}
+
+	cpu.crt.Print()
 
 	return Sum(cpu.store)
 }
@@ -215,17 +260,18 @@ func run(r io.Reader) int {
 func TestExample(t *testing.T) {
 	expect := 13140
 	r := bytes.NewReader(example)
-	if s := run(r); s != expect {
+	if s := runCPU(r); s != expect {
 		t.Fatalf("%d != %d\n", s, expect)
 	}
 }
 
-func TestVisible(t *testing.T) {
+func TestCPU(t *testing.T) {
 	expect := 14860
 
 	f, _ := os.Open("input")
 	defer f.Close()
-	if s := run(f); s != expect {
+	if s := runCPU(f); s != expect {
 		t.Fatalf("%d != %d\n", s, expect)
 	}
+	// printed: RGZEHURK
 }
